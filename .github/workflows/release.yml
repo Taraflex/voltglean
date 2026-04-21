@@ -8,16 +8,52 @@ permissions:
 
 jobs:
   metadata:
-    name: Extract Metadata
+    name: Prepare Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.final_version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version from Cargo.toml
-        id: get_version
+      - name: Get current version
+        id: curr_version
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | head -n 1 | cut -d '"' -f 2)
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION"
+
+      - name: Check if version exists on crates.io
+        id: check_exists
+        run: |
+          # Returns 200 if version exists, 404 if not (or if crate doesn't exist)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://crates.io/api/v1/crates/voltglean/$VERSION/download || echo "404")
+          if [ "$STATUS" == "200" ]; then
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
+      - name: Bump version if needed
+        if: env.exists == 'true'
+        run: |
+          echo "Version $VERSION already exists. Bumping patch..."
+          # Simple regex to increment the last number in a semver string
+          NEW_VERSION=$(echo $VERSION | perl -pe 's/(\d+)(?!.*\d+)/$1 + 1/e')
+          sed -i "s/^version = \"$VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          echo "version=$NEW_VERSION" >> $GITHUB_ENV
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml
+          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
+          git push
+
+      - name: Set final version output
+        id: final_version
         run: |
           VERSION=$(grep '^version =' Cargo.toml | head -n 1 | cut -d '"' -f 2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -37,6 +73,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }} # Checkout the branch where workflow was triggered
+
+      - name: Pull latest changes
+        run: git pull origin ${{ github.ref_name }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -51,7 +92,6 @@ jobs:
         run: |
           $bin_name = "voltglean.exe"
           $target = "${{ matrix.target }}"
-          $version = "${{ needs.metadata.outputs.version }}"
           $archive_name = "voltglean-$target.zip"
           
           cd target/$target/release
@@ -64,9 +104,30 @@ jobs:
           name: voltglean-${{ matrix.target }}
           path: voltglean-${{ matrix.target }}.zip
 
+  publish:
+    name: Publish to crates.io
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Pull latest changes
+        run: git pull origin ${{ github.ref_name }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Publish
+        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+        env:
+          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+
   release:
     name: Create Release
-    needs: [metadata, build]
+    needs: [metadata, build, publish]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
