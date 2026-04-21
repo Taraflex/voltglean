@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "voltglean",
+            "type": "lldb",
+            "sourceLanguages": ["rust"],
+            "request": "launch",
+            "preLaunchTask": "cargo build: debug",
+            "program": "${workspaceFolder}/target/debug/voltglean",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "help",
+            "type": "lldb",
+            "sourceLanguages": ["rust"],
+            "request": "launch",
+            "preLaunchTask": "cargo build: debug",
+            "program": "${workspaceFolder}/target/debug/voltglean",
+            "args": ["/?"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "version",
+            "type": "lldb",
+            "sourceLanguages": ["rust"],
+            "request": "launch",
+            "preLaunchTask": "cargo build: debug",
+            "program": "${workspaceFolder}/target/debug/voltglean",
+            "args": ["--version"],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

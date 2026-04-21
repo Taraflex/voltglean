@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo build: debug",
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": ["$rustc"],
+            "group": "build",
+            "presentation": {
+                "panel": "shared",
+                "reveal": "silent",
+                "clear": true
+            }
+        },
+        {
+            "label": "cargo build: release",
+            "type": "cargo",
+            "command": "build",
+            "args": ["--release"],
+            "problemMatcher": ["$rustc"],
+            "group": "build",
+            "presentation": {
+                "panel": "shared",
+                "reveal": "silent",
+                "clear": true
+            }
+        }
+    ]
+}
