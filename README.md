@@ -1,6 +1,6 @@
 # VoltGlean
 
-VoltGlean exports Windows power plans to an executable `*.bat` script. It allows you to save your performance and power settings for migration to another system or restoration after an OS reinstall.
+VoltGlean exports Windows power plans as a powershell script. It allows you to save your performance and power settings for migration to another system or restoration after an OS reinstall.
 
 ## Features
 
@@ -13,19 +13,22 @@ VoltGlean exports Windows power plans to an executable `*.bat` script. It allows
 
 ## Installation
 
-### Via Cargo
-```bash
-cargo install voltglean
+### Via WinGet
+
+```powershell
+winget install Taraflex.VoltGlean
 ```
 
 ### Via cargo-binstall
+
 ```bash
 cargo binstall voltglean
 ```
 
-### Via WinGet
-```powershell
-winget install Taraflex.VoltGlean
+### Via Cargo
+
+```bash
+cargo install voltglean
 ```
 
 ## Usage
@@ -33,12 +36,13 @@ winget install Taraflex.VoltGlean
 Run the program and redirect the output to a file:
 
 ```powershell
-voltglean > restore_power_plans.bat
+voltglean > restore_power_plans.ps1
 ```
 
-This will create `restore_power_plans.bat`. Run it as Administrator to apply the saved power settings.
+This will create `restore_power_plans.ps1`. Run it as Administrator to apply the saved power settings.
 
 ### Options
+
 ```text
 -h, --help      Show help message
 -v, --version   Show version information

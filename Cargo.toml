@@ -2,11 +2,11 @@
 name = "voltglean"
 version = "0.0.2"
 edition = "2024"
-description = "Export Windows power plans to an executable .bat script"
+description = "Exporting Windows power plans as a powershell script"
 readme = "README.md"
 repository = "https://github.com/Taraflex/voltglean.git"
 categories = ["command-line-utilities", "config", "parsing"]
-keywords = ["power-plan", "backup", "windows", "powercfg", "automation"]
+keywords = ["power-plan", "backup", "windows", "powercfg", "automation", "powershell"]
 license = "MIT OR Apache-2.0"
 
 [[bin]]

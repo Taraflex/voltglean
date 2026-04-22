@@ -1,4 +1,5 @@
 /target
 *.yaml
 *.bat
+*.ps1
 /winget

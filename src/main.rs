@@ -68,32 +68,46 @@ mod filters {
 
 #[derive(Template)]
 #[template(
-    source = r#"@echo off
-chcp 65001 > nul
+    source = r#"Set-StrictMode -Version 1
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+
+if (!([System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
+
+  $arguments = @('-NoExit', '-ExecutionPolicy', 'Bypass') + ([System.Environment]::GetCommandLineArgs() | Select-Object -Skip 1)
+  $appPath = (Get-Process -Id $PID).Path
+
+  Write-Warning 'Administrator privileges are required. Relaunching...'
+  Start-Process -FilePath $appPath -Verb RunAs -ArgumentList $arguments
+
+  [System.Environment]::Exit(740)
+}
 {% for (guid, plan) in plans %}
-:: ============================================================================
-:: PLAN: {{ plan.description }} ({{ guid }})
-:: ============================================================================
-    {%- let p_id = plan.alias.as_ref().unwrap_or(guid) %}
-    {% for (s_guid, sub) in plan.subgroups %}
-  :: {{ sub.description }} ({{ s_guid }})
-        {%- let s_id = sub.alias.as_ref().unwrap_or(s_guid) %}
-        {% for (st_guid, setting) in sub.settings %}
-    :: {{ setting.description }} | {{ setting.options|format_opts }}
-    powercfg /setacvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.ac }}
-    powercfg /setdcvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.dc }}
-        {% endfor %}
+# ============================================================================
+#region PLAN: {{ plan.description }} ({{ guid }})
+# ============================================================================
+  {%- let p_id = plan.alias.as_ref().unwrap_or(guid) %}
+  {% for (s_guid, sub) in plan.subgroups %}
+  #region {{ sub.description }} ({{ s_guid }})
+    {%- let s_id = sub.alias.as_ref().unwrap_or(s_guid) %}
+    {% for (st_guid, setting) in sub.settings %}
+    # {{ setting.description }} | {{ setting.options|format_opts }}
+    powercfg /setacvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.ac }} #🔌
+    powercfg /setdcvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.dc }} #🔋
     {% endfor %}
+  #endregion
+  {%- endfor %}
+#endregion
 {%- endfor %}
 {%- if let Some(active) = active_plan %}
-:: ============================================================================
+# ============================================================================
 powercfg /setactive {{ active }}
 {% endif %}
 "#,
     ext = "txt",
     escape = "none"
 )]
-struct BatTemplate {
+struct ScriptTemplate {
     plans: Vec<(String, PowerPlan)>,
     active_plan: Option<String>,
 }
@@ -171,7 +185,7 @@ fn main() {
                     env!("CARGO_PKG_VERSION"),
                     "\n\nUsage:\n  ",
                     env!("CARGO_PKG_NAME"),
-                    " > power_schemes.bat\n\nOptions:\n  -h, --help, /?    Show this help message\n  -v, --version     Show version information",
+                    " > power_schemes.ps1\n\nOptions:\n  -h, --help, /?    Show this help message\n  -v, --version     Show version information",
                 ));
                 return;
             }
@@ -224,7 +238,7 @@ fn main() {
     }
 
     if !plans.is_empty() {
-        let template = BatTemplate { plans, active_plan }
+        let template = ScriptTemplate { plans, active_plan }
             .render()
             .expect("FAIL render script template");
 
