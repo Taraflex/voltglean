@@ -16,7 +16,7 @@ VoltGlean exports Windows power plans as a powershell script. It allows you to s
 ### Via WinGet
 
 ```powershell
-winget install Taraflex.VoltGlean
+winget install Taraflex.Voltglean
 ```
 
 ### Via cargo-binstall
