@@ -5,8 +5,8 @@ edition = "2024"
 description = "Exporting Windows power plans as a powershell script"
 readme = "README.md"
 repository = "https://github.com/Taraflex/voltglean.git"
-categories = ["command-line-utilities", "config", "parsing"]
-keywords = ["power-plan", "backup", "windows", "powercfg", "automation", "powershell"]
+categories = ["command-line-utilities", "config", "parsing", "os::windows-apis"]
+keywords = ["windows", "power-management", "powercfg", "backup", "optimization"]
 license = "MIT OR Apache-2.0"
 
 [[bin]]
