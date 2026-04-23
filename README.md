@@ -6,7 +6,6 @@ VoltGlean exports Windows power plans as a powershell script. It allows you to s
 
 - Full Export: Extracts all available power schemes.
 - AC/DC Settings: Saves parameters for both plugged-in and battery modes.
-- Automation: Generates a ready-to-use batch file using the standard powercfg utility.
 - Smart Parsing: Correctly handles GUIDs, aliases, and nested setting subgroups.
 - Hidden Settings: Dumps properties that are hidden in the Windows GUI, allowing you to manually edit them in the script before applying.
 - Active Plan: Detects the currently active plan and includes a command to reactivate it.
