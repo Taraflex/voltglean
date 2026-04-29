@@ -67,46 +67,7 @@ mod filters {
 }
 
 #[derive(Template)]
-#[template(
-    source = r#"Set-StrictMode -Version 1
-$ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = [Text.Encoding]::UTF8
-
-if (!([System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)) {
-
-  $arguments = @('-NoExit', '-ExecutionPolicy', 'Bypass') + ([System.Environment]::GetCommandLineArgs() | Select-Object -Skip 1)
-  $appPath = (Get-Process -Id $PID).Path
-
-  Write-Warning 'Administrator privileges are required. Relaunching...'
-  Start-Process -FilePath $appPath -Verb RunAs -ArgumentList $arguments
-
-  [System.Environment]::Exit(740)
-}
-{% for (guid, plan) in plans %}
-# ============================================================================
-#region PLAN: {{ plan.description }} ({{ guid }})
-# ============================================================================
-  {%- let p_id = plan.alias.as_ref().unwrap_or(guid) %}
-  {% for (s_guid, sub) in plan.subgroups %}
-  #region {{ sub.description }} ({{ s_guid }})
-    {%- let s_id = sub.alias.as_ref().unwrap_or(s_guid) %}
-    {% for (st_guid, setting) in sub.settings %}
-    # {{ setting.description }} | {{ setting.options|format_opts }}
-    powercfg /setacvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.ac }} #🔌
-    powercfg /setdcvalueindex {{ p_id }} {{ s_id }} {{ setting.alias.as_ref().unwrap_or(st_guid) }} {{ setting.dc }} #🔋
-    {% endfor %}
-  #endregion
-  {%- endfor %}
-#endregion
-{%- endfor %}
-{%- if let Some(active) = active_plan %}
-# ============================================================================
-powercfg /setactive {{ active }}
-{% endif %}
-"#,
-    ext = "txt",
-    escape = "none"
-)]
+#[template(path = "script.ps1.hbs", ext = "txt", escape = "none")]
 struct ScriptTemplate {
     plans: Vec<(String, PowerPlan)>,
     active_plan: Option<String>,
