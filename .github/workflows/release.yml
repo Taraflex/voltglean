@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  administration: write
 
 jobs:
   metadata:
@@ -22,9 +23,22 @@ jobs:
       - name: Get current version
         id: curr_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | head -n 1 | cut -d '"' -f 2)
+          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
           echo "version=$VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION"
+          
+          DESC=$(sed -n 's/^description = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          KEYWORDS=$(sed -n 's/^keywords = \[\(.*\)\]/\1/p' Cargo.toml | head -n 1 | tr -d '" ' )
+          
+          if [ ! -z "$DESC" ]; then
+            gh repo edit --description "$DESC"
+          fi
+          
+          if [ ! -z "$KEYWORDS" ]; then
+            gh repo edit --topic "$KEYWORDS"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check if version exists on crates.io
         id: check_exists
@@ -95,7 +109,7 @@ jobs:
           $archive_name = "voltglean-$target.zip"
           
           cd target/$target/release
-          7z a ../../../$archive_name $bin_name
+          7z a -tzip -mx7 -mm=Deflate64 -mfb=64 ../../../$archive_name $bin_name
           cd ../../../
 
       - name: Upload artifact
