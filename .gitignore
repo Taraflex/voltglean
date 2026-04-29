@@ -1,5 +1,6 @@
 /target
 *.yaml
-*.bat
 *.ps1
-/winget
+*.psm1
+*.bat
+/publish_manifests

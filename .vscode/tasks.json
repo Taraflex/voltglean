@@ -25,6 +25,18 @@
                 "reveal": "silent",
                 "clear": true
             }
+        },
+        {
+            "label": "output to file",
+            "type": "shell",
+            "dependsOn": "cargo build: debug",
+            "command": "\"${workspaceFolder}/target/debug/voltglean.exe\" > power_schemes.ps1",
+            "group": "test",
+            "presentation": {
+                "panel": "shared",
+                "reveal": "silent",
+                "clear": true
+            }
         }
     ]
 }
