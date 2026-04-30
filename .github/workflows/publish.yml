@@ -22,8 +22,22 @@ jobs:
       - name: Install yq
         run: winget install --id MikeFarah.yq --exact --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity --silent
 
-      - name: Install the JSON Schema CLI
-        uses: sourcemeta/jsonschema@v15.2.0
+      - name: Install JSON Schema CLI
+        shell: pwsh
+        run: |
+          $url = "https://github.com/sourcemeta/jsonschema/releases/download/v15.2.0/jsonschema-15.2.0-windows-x86_64.zip"
+          $zipFile = "jsonschema.zip"
+          $tempDir = "jsonschema_temp"
+
+          Write-Host "Downloading JSON Schema CLI..."
+          Invoke-WebRequest -Uri $url -OutFile $zipFile
+
+          Write-Host "Extracting archive..."
+          Expand-Archive -Path $zipFile -DestinationPath $tempDir
+          Move-Item -Path "$tempDir\jsonschema-15.2.0-windows-x86_64\bin\jsonschema.exe" -Destination "$PWD\jsonschema.exe"
+
+          Remove-Item -Path $zipFile, $tempDir -Recurse -Force
+          Write-Host "jsonschema.exe successfully installed to $PWD"
 
       - name: Run Publish Script
         shell: pwsh
