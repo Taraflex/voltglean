@@ -31,10 +31,11 @@ jobs:
       - name: Get Metadata and Sync
         id: meta
         run: |
+          # Получаем базовые данные
           NAME=$(yq '.package.name' Cargo.toml)
           VERSION=$(yq '.package.version' Cargo.toml)
           DESC=$(yq '.package.description' Cargo.toml)
-          KEYWORDS=$(yq -o=csv '.package.keywords' Cargo.toml)
+          KEYWORDS_JSON=$(yq -o=json '.package.keywords' Cargo.toml)
 
           echo "NAME=$NAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -43,8 +44,9 @@ jobs:
             gh repo edit --description "$DESC"
           fi
 
-          if [ "$KEYWORDS" != "null" ] && [ -n "$KEYWORDS" ]; then
-            gh repo edit --topic "$KEYWORDS"
+          if [ "$KEYWORDS_JSON" != "null" ] && [ "$KEYWORDS_JSON" != "[]" ]; then
+            echo "Updating topics to: $KEYWORDS_JSON"
+            echo "{\"names\": $KEYWORDS_JSON}" | gh api -X PUT "repos/{$GITHUB_REPOSITORY}/topics" --input -
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}
