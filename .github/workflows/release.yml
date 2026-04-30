@@ -13,38 +13,46 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.final_version.outputs.version }}
+      name: ${{ steps.final_version.outputs.name }}
+      new_sha: ${{ steps.push_step.outputs.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout Cargo.toml only
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          sparse-checkout: Cargo.toml
+          sparse-checkout-cone-mode: false
+          fetch-depth: 0 # Обязательно 0 для возможности git push
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get current version
-        id: curr_version
+      - name: Install yq
         run: |
-          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
-          echo "version=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION"
-          
-          DESC=$(sed -n 's/^description = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
-          KEYWORDS=$(sed -n 's/^keywords = \[\(.*\)\]/\1/p' Cargo.toml | head -n 1 | tr -d '" ' )
-          
-          if [ ! -z "$DESC" ]; then
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
+      - name: Get Metadata and Sync
+        id: meta
+        run: |
+          NAME=$(yq -p=toml '.package.name' Cargo.toml)
+          VERSION=$(yq -p=toml '.package.version' Cargo.toml)
+          DESC=$(yq -p=toml '.package.description' Cargo.toml)
+          KEYWORDS=$(yq -p=toml -o=csv '.package.keywords' Cargo.toml)
+
+          echo "NAME=$NAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+          if [ "$DESC" != "null" ] && [ -n "$DESC" ]; then
             gh repo edit --description "$DESC"
           fi
-          
-          if [ ! -z "$KEYWORDS" ]; then
+
+          if [ "$KEYWORDS" != "null" ] && [ -n "$KEYWORDS" ]; then
             gh repo edit --topic "$KEYWORDS"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check if version exists on crates.io
-        id: check_exists
         run: |
-          # Returns 200 if version exists, 404 if not (or if crate doesn't exist)
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://crates.io/api/v1/crates/voltglean/$VERSION/download || echo "404")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://crates.io/api/v1/crates/$NAME/$VERSION/download || echo "404")
           if [ "$STATUS" == "200" ]; then
             echo "exists=true" >> $GITHUB_ENV
           else
@@ -55,48 +63,59 @@ jobs:
         if: env.exists == 'true'
         run: |
           echo "Version $VERSION already exists. Bumping patch..."
-          # Simple regex to increment the last number in a semver string
           NEW_VERSION=$(echo $VERSION | perl -pe 's/(\d+)(?!.*\d+)/$1 + 1/e')
-          sed -i "s/^version = \"$VERSION\"/version = \"$NEW_VERSION\"/" Cargo.toml
-          echo "version=$NEW_VERSION" >> $GITHUB_ENV
-          
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Cargo.toml
-          git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
-          git push
+          yq -p=toml -i ".package.version = \"$NEW_VERSION\"" Cargo.toml
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "bumped=true" >> $GITHUB_ENV
 
-      - name: Set final version output
+      - name: Push Changes
+        id: push_step
+        run: |
+          if [ "${{ env.bumped }}" == "true" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add Cargo.toml
+            git commit -m "chore: bump version to $VERSION [skip ci]"
+            git push
+            # Извлекаем SHA нового коммита
+            echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          else
+            # Передаем SHA, который запустил воркфлоу
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set final outputs
         id: final_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | head -n 1 | cut -d '"' -f 2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "name=$NAME" >> $GITHUB_OUTPUT
 
   build:
     name: Build for ${{ matrix.target }}
     needs: metadata
     runs-on: windows-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         target:
           - x86_64-pc-windows-msvc
           - i686-pc-windows-msvc
           - aarch64-pc-windows-msvc
-
     steps:
-      - name: Checkout repository
+      - name: Checkout repository at correct SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }} # Checkout the branch where workflow was triggered
-
-      - name: Pull latest changes
-        run: git pull origin ${{ github.ref_name }}
+          ref: ${{ needs.metadata.outputs.new_sha }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
@@ -104,32 +123,32 @@ jobs:
       - name: Prepare artifact
         shell: pwsh
         run: |
-          $bin_name = "voltglean.exe"
+          $name = "${{ needs.metadata.outputs.name }}"
           $target = "${{ matrix.target }}"
-          $archive_name = "voltglean-$target.zip"
-          
+          $archive_name = "$name-$target.zip"
+
           cd target/$target/release
-          7z a -tzip -mx7 -mm=Deflate64 -mfb=64 ../../../$archive_name $bin_name
+          # Архивируем все exe и dll. 
+          # Если dll нет, 7z может ругнуться, поэтому используем маску аккуратно.
+          # В PowerShell 7z сработает корректно, если найден хотя бы один файл по списку.
+          7z a -tzip -mx7 -mm=Deflate64 -mfb=64 ../../../$archive_name *.exe *.dll
           cd ../../../
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: voltglean-${{ matrix.target }}
-          path: voltglean-${{ matrix.target }}.zip
+          name: ${{ needs.metadata.outputs.name }}-${{ matrix.target }}
+          path: ${{ needs.metadata.outputs.name }}-${{ matrix.target }}.zip
 
   publish:
     name: Publish to crates.io
     needs: [metadata, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository at correct SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
-
-      - name: Pull latest changes
-        run: git pull origin ${{ github.ref_name }}
+          ref: ${{ needs.metadata.outputs.new_sha }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -137,7 +156,7 @@ jobs:
       - name: Cargo Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
         env:
-          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
   release:
     name: Create Release
@@ -157,7 +176,5 @@ jobs:
           name: Release v${{ needs.metadata.outputs.version }}
           files: artifacts/*.zip
           generate_release_notes: true
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

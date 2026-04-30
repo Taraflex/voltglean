@@ -1,6 +1,5 @@
 /target
 *.yaml
-*.ps1
-*.psm1
+/*.ps1
 *.bat
 /publish_manifests

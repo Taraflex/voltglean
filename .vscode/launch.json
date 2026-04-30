@@ -30,6 +30,22 @@
             "program": "${workspaceFolder}/target/debug/voltglean",
             "args": ["--version"],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "PowerShell",
+            "request": "launch",
+            "name": "Gen publish manifests",
+            "script": "${workspaceFolder}/.github/workflows/generate_publish_manifests.ps1",
+            "createTemporaryIntegratedConsole": true,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "PowerShell",
+            "request": "launch",
+            "name": "Publish",
+            "script": "${workspaceFolder}/.github/workflows/submit_publish_manifests.ps1",
+            "createTemporaryIntegratedConsole": true,
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -1,0 +1,36 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/submit_publish_manifests.ps1
+            .github/workflows/generate_publish_manifests.psm1
+            .github/workflows/fetch.psm1
+            Cargo.toml
+          sparse-checkout-cone-mode: false
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install yq
+        run: winget install --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements yq
+
+      - name: Install the JSON Schema CLI
+        uses: sourcemeta/jsonschema@v15
+
+      - name: Run Publish Script
+        shell: pwsh
+        run: |
+          # Note: PUBLISH_TOKEN must be a PAT with 'repo' and 'workflow' scopes
+          # to allow forking and creating Pull Requests on microsoft/winget-pkgs and ScoopInstaller/Extras
+          .github/workflows/submit_publish_manifests.ps1
+        env:
+          GH_TOKEN: ${{ secrets.PUBLISH_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
