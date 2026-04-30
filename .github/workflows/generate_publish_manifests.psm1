@@ -120,7 +120,7 @@ function Get-CargoMetadata {
     }
 }
 
-$MANIFEST_VERSION = '1.12.0'
+$MANIFEST_VERSION = '1.10.0'
 function Save-WingetManifest {
     param($Data, $Path)
     $yaml = $Data | ConvertTo-Json -Depth 5 | yq -P -o=yaml 'del(.. | select(. == null)) | sort_keys(..)'
