@@ -20,7 +20,7 @@ jobs:
           token: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Install yq
-        run: winget install --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements yq
+        run: winget install --id MikeFarah.yq --exact --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity --silent
 
       - name: Install the JSON Schema CLI
         uses: sourcemeta/jsonschema@v15.2.0
