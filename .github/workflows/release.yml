@@ -46,7 +46,7 @@ jobs:
 
           if [ "$KEYWORDS_JSON" != "null" ] && [ "$KEYWORDS_JSON" != "[]" ]; then
             echo "Updating topics to: $KEYWORDS_JSON"
-            echo "{\"names\": $KEYWORDS_JSON}" | gh api -X PUT "repos/{$GITHUB_REPOSITORY}/topics" --input -
+            echo "{\"names\": $KEYWORDS_JSON}" | gh api -X PUT "/repos/${{ github.repository }}/topics" --input -
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}
