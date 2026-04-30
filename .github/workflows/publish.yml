@@ -17,7 +17,7 @@ jobs:
             Cargo.toml
           sparse-checkout-cone-mode: false
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Install yq
         run: winget install --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements yq
@@ -28,9 +28,9 @@ jobs:
       - name: Run Publish Script
         shell: pwsh
         run: |
-          # Note: PUBLISH_TOKEN must be a PAT with 'repo' and 'workflow' scopes
+          # Note: ADMIN_TOKEN must be a PAT with 'repo' and 'workflow' scopes
           # to allow forking and creating Pull Requests on microsoft/winget-pkgs and ScoopInstaller/Extras
           .github/workflows/submit_publish_manifests.ps1
         env:
-          GH_TOKEN: ${{ secrets.PUBLISH_TOKEN || secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}

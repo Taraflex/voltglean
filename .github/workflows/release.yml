@@ -21,7 +21,7 @@ jobs:
           sparse-checkout: Cargo.toml
           sparse-checkout-cone-mode: false
           fetch-depth: 0 # Обязательно 0 для возможности git push
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Install yq
         run: |
@@ -31,10 +31,10 @@ jobs:
       - name: Get Metadata and Sync
         id: meta
         run: |
-          NAME=$(yq -p=toml '.package.name' Cargo.toml)
-          VERSION=$(yq -p=toml '.package.version' Cargo.toml)
-          DESC=$(yq -p=toml '.package.description' Cargo.toml)
-          KEYWORDS=$(yq -p=toml -o=csv '.package.keywords' Cargo.toml)
+          NAME=$(yq '.package.name' Cargo.toml)
+          VERSION=$(yq '.package.version' Cargo.toml)
+          DESC=$(yq '.package.description' Cargo.toml)
+          KEYWORDS=$(yq -o=csv '.package.keywords' Cargo.toml)
 
           echo "NAME=$NAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -47,7 +47,7 @@ jobs:
             gh repo edit --topic "$KEYWORDS"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Check if version exists on crates.io
         run: |
@@ -63,7 +63,7 @@ jobs:
         run: |
           echo "Version $VERSION already exists. Bumping patch..."
           NEW_VERSION=$(echo $VERSION | perl -pe 's/(\d+)(?!.*\d+)/$1 + 1/e')
-          yq -p=toml -i ".package.version = \"$NEW_VERSION\"" Cargo.toml
+          yq -i ".package.version = \"$NEW_VERSION\"" Cargo.toml
           echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
           echo "bumped=true" >> $GITHUB_ENV
 
@@ -176,4 +176,4 @@ jobs:
           files: artifacts/*.zip
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}
