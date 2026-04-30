@@ -1,4 +1,4 @@
-name: Publish Release
+name: Publish Last Release
 
 on:
   workflow_dispatch:

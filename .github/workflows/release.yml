@@ -1,11 +1,10 @@
-name: Release
+name: Create Release
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: write
-  administration: write
 
 jobs:
   metadata:
