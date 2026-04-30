@@ -23,7 +23,7 @@ jobs:
         run: winget install --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements yq
 
       - name: Install the JSON Schema CLI
-        uses: sourcemeta/jsonschema@v15
+        uses: sourcemeta/jsonschema@v15.2.0
 
       - name: Run Publish Script
         shell: pwsh
