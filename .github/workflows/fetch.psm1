@@ -101,6 +101,7 @@ function fetch {
         if ($response.Headers['Last-Modified']) {
             $file.LastWriteTime = [DateTime]::Parse($response.Headers['Last-Modified'])
         }
+        Unblock-File -LiteralPath $file
 
         Write-Verbose "Cache updated: $newFileName"
 

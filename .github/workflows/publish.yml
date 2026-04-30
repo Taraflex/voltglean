@@ -52,7 +52,7 @@ jobs:
         run: |
           # Note: ADMIN_TOKEN must be a PAT with 'repo' and 'workflow' scopes
           # to allow forking and creating Pull Requests on microsoft/winget-pkgs and ScoopInstaller/Extras
+          winget settings --enable LocalArchiveMalwareScanOverride
           .github/workflows/submit_publish_manifests.ps1
         env:
-          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}

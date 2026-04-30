@@ -156,8 +156,6 @@ jobs:
 
       - name: Cargo Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
   release:
     name: Create Release
@@ -173,9 +171,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.ADMIN_TOKEN }}
           tag_name: v${{ needs.metadata.outputs.version }}
           name: Release v${{ needs.metadata.outputs.version }}
           files: artifacts/*.zip
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}

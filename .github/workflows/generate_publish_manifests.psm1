@@ -4,6 +4,13 @@ $ErrorActionPreference = 'Stop'
 
 Import-Module "${PSScriptRoot}/fetch.psm1"
 
+class ProcessException: System.Exception {
+    [int] $code = 0
+    ProcessException([PSCustomObject]$info) : base ("$info") {
+        $this.code = $info.code
+    }
+}
+
 function ~ {
     param (
         [string]$DefaultErrorMessage = '',
@@ -198,7 +205,7 @@ function New-PackageManifests {
         Remove-Item $tempDir -Recurse -ErrorAction SilentlyContinue
     }
 
-    $wingetManifestDir = Resolve-Path -LiteralPath "$OutputDir/winget/$pkgVer"
+    $wingetManifestDir = "$OutputDir/winget/$pkgVer"
     New-Item -ItemType Directory -Path $wingetManifestDir -Force > $null
     
     Save-WingetManifest -Path "$wingetManifestDir/$PackageId.yaml" -Data @{
@@ -294,8 +301,8 @@ function New-PackageManifests {
     }
 
     $scoopManifestDir = "$OutputDir/scoop/$pkgVer"
-    $scoopManifestPath = Resolve-Path -LiteralPath "$scoopManifestDir/$($cargoPkg.name).json" # scoop respect only windows paths for local install
     New-Item -ItemType Directory -Path $scoopManifestDir -Force > $null
+    $scoopManifestPath = "$scoopManifestDir/$($cargoPkg.name).json"
 
     $Json = $ScoopManifest | ConvertTo-Json -Depth 5
     $Json = $Json -replace ',\s*"[^"]+":\s*null', '' -replace '"[^"]+":\s*null,?', '' # drop nulls
@@ -309,9 +316,9 @@ function New-PackageManifests {
         Version           = $pkgVer
         Publisher         = $Publisher
         PackageName       = $PackageName #$cargoPkg.name
-        WingetManifestDir = $wingetManifestDir
-        ScoopManifestPath = $scoopManifestPath
         TestBins          = $TestBins 
+        WingetManifestDir = (Resolve-Path -LiteralPath $wingetManifestDir).Path
+        ScoopManifestPath = (Resolve-Path -LiteralPath $scoopManifestPath).Path # scoop respect only windows paths for local install
     }
 }
 
@@ -336,8 +343,7 @@ function Test-PackageManifests {
     ~ { winget validate --disable-interactivity $Result.WingetManifestDir }
     $schema = fetch -Uri 'https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json' -OutFile
     ~ { jsonschema validate $schema $Result.ScoopManifestPath }
-    
-    ~ { winget install --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements --force --manifest $Result.WingetManifestDir }
+    ~ { winget install --uninstall-previous --no-upgrade --accept-source-agreements --disable-interactivity --silent --accept-package-agreements --force --ignore-local-archive-malware-scan --manifest $Result.WingetManifestDir }
     CallAliasHelp $Result.TestBins
     ~ { winget uninstall --disable-interactivity --manifest $Result.WingetManifestDir }
     
